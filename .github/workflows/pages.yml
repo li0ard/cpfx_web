@@ -29,11 +29,11 @@ jobs:
         run: |
           bun i --frozen-lockfile
           bun run build
-          touch docs/.nojekyll
+          touch dist/.nojekyll
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: dist
   # Deployment job
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
