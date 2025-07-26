@@ -27,6 +27,7 @@ export const proceedPFX = (file: Uint8Array, passw: string): string => {
         return ks2pem(Ks, result.oids)
     } catch (e) {
         console.error("Blob decoding error. Perhaps just incorrect password")
+        console.error(e)
         return ""
     }
 }

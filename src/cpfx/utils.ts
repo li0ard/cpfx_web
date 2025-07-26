@@ -1,5 +1,5 @@
-import { Gost341194 } from "@li0ard/gost341194"
-import { bytesToHex, hexToBytes } from "@li0ard/gost3413/dist/utils"
+import { gost341194 } from "@li0ard/gost341194"
+import { concatBytes, hexToBytes } from "@li0ard/gost3413/dist/utils"
 import { decryptCFB, decryptECB, sboxes } from "@li0ard/magma"
 import { PrivateKeyInfo } from "@peculiar/asn1-pkcs8"
 import { AsnParser, AsnSerializer, OctetString } from "@peculiar/asn1-schema"
@@ -18,17 +18,33 @@ const utf16le = (str: string) => {
     return buffer;
 }
 
+/**
+ * Подготовка ключа для снятия транспортной кодировки
+ * ```
+ * K0 = utf16(PASS)
+ * 
+ * ∀i ∊ {1,2,...,r}: K_i = GOST341194(K_i-1 || salt || i)
+ * ```
+ * @param pass Пароль от PFX
+ * @param salt Вектор инициализации (Прописан в PFX)
+ * @param rounds Количество итераций хэширования (Прописано в PFX)
+ */
 export const prepareTransportKey = (pass: string, salt: Uint8Array, rounds: number): Uint8Array => {
     let key: Uint8Array = utf16le(pass)
     for(let i = 1; i < rounds + 1; i++) {
-        let hasher = new Gost341194()
-        hasher.update(hexToBytes(bytesToHex(key) + bytesToHex(salt) + i.toString(16).padStart(4, "0")))
-        key = hasher.digest()
+        //key = gost341194(hexToBytes(bytesToHex(key) + bytesToHex(salt) + i.toString(16).padStart(4, "0")));
+        key = gost341194(concatBytes(key, salt, new Uint8Array([(i >> 8) & 0xFF, i & 0xFF])))
     }
 
     return key
 }
 
+/**
+ * Снятие транспортной кодировки
+ * @param key Ранее сгененрированный ключ
+ * @param salt Вектор инициализации (Прописан в PFX)
+ * @param encrypted Зашифрованный ключевой блоб
+ */
 export const decodeTransport = (key: Uint8Array, salt: Uint8Array, encrypted: Uint8Array): Uint8Array => {
     return decryptCFB(key, encrypted, salt.slice(0, 8), true, sboxes.ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET)
 }
@@ -43,6 +59,7 @@ export const parseBlob = (blob: Uint8Array): ParsedBlob => {
             ukm: parsedBlob.value.ukm,
             enc: parsedBlob.value.cek.enc,
             mac: parsedBlob.value.cek.mac,
+            raw: concatBytes(parsedBlob.value.ukm, parsedBlob.value.cek.enc, parsedBlob.value.cek.mac)
         },
         oids: {
             algorithm: parsed.privateKeyAlgorithm.algorithm,
@@ -52,6 +69,18 @@ export const parseBlob = (blob: Uint8Array): ParsedBlob => {
     }
 }
 
+/**
+ * Снятие экспортной кодировки
+ * ```
+ * label = 0x26BDB878
+ * 
+ * KEKe = kdf_gostr3411_2012_256(K, label, ukm)
+ * Ks = decryptECB(KEKe, CEK_enc)
+ * ```
+ * @param key Ранее сгененрированный ключ
+ * @param ukm `UKM` из блоба
+ * @param enc `CEK_ENC` из блоба
+ */
 export const decodeExport = (key: Uint8Array, ukm: Uint8Array, enc: Uint8Array): Uint8Array => {
     return decryptECB(kdf_gostr3411_2012_256(key, hexToBytes("26BDB878"), ukm), enc, true, sboxes.ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET)
 }
