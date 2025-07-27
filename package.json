@@ -11,10 +11,9 @@
     "type-check": "vue-tsc --build"
   },
   "dependencies": {
-    "@li0ard/gost341194": "^0.1.2",
-    "@li0ard/gost3413": "^0.1.6",
-    "@li0ard/magma": "^0.1.6-1",
-    "@li0ard/streebog": "^0.2.3",
+    "@li0ard/gost341194": "^0.1.3",
+    "@li0ard/magma": "^0.1.7",
+    "@li0ard/streebog": "^0.2.4",
     "@peculiar/asn1-pfx": "^2.4.0",
     "@peculiar/asn1-pkcs8": "^2.4.0",
     "@peculiar/asn1-schema": "^2.4.0",

@@ -74,13 +74,6 @@ export class KeyBag {
     public bagValue = new KeyBagValue()
 }
 
-export interface ExportEncoding {
-    ukm: Uint8Array
-    enc: Uint8Array
-    mac: Uint8Array
-    raw: Uint8Array
-}
-
 export interface ExportOids {
     algorithm: string
     curve: string
@@ -88,6 +81,6 @@ export interface ExportOids {
 }
 
 export interface ParsedBlob {
-    exportEncoding: ExportEncoding
+    exportEncoding: Uint8Array
     oids: ExportOids
 }

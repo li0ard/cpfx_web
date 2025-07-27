@@ -1,6 +1,6 @@
 import { gost341194 } from "@li0ard/gost341194"
-import { concatBytes, hexToBytes } from "@li0ard/gost3413/dist/utils"
-import { decryptCFB, decryptECB, sboxes } from "@li0ard/magma"
+import { concatBytes, hexToBytes } from "@noble/hashes/utils"
+import { decryptCFB, sboxes, unwrap } from "@li0ard/magma"
 import { PrivateKeyInfo } from "@peculiar/asn1-pkcs8"
 import { AsnParser, AsnSerializer, OctetString } from "@peculiar/asn1-schema"
 import { ExportKeyBlob, PrivateKeyOids, type ExportOids, type ParsedBlob } from "./schema"
@@ -51,16 +51,11 @@ export const decodeTransport = (key: Uint8Array, salt: Uint8Array, encrypted: Ui
 
 export const parseBlob = (blob: Uint8Array): ParsedBlob => {
     let parsed = AsnParser.parse(blob, PrivateKeyInfo)
-    let cryptoproBlob = new Uint8Array(AsnParser.parse(blob, PrivateKeyInfo).privateKey.buffer)
+    let cryptoproBlob = new Uint8Array(parsed.privateKey.buffer)
     let parsedBlob = AsnParser.parse(cryptoproBlob.slice(16), ExportKeyBlob)
 
     return {
-        exportEncoding: {
-            ukm: parsedBlob.value.ukm,
-            enc: parsedBlob.value.cek.enc,
-            mac: parsedBlob.value.cek.mac,
-            raw: concatBytes(parsedBlob.value.ukm, parsedBlob.value.cek.enc, parsedBlob.value.cek.mac)
-        },
+        exportEncoding: concatBytes(parsedBlob.value.ukm, parsedBlob.value.cek.enc, parsedBlob.value.cek.mac),
         oids: {
             algorithm: parsed.privateKeyAlgorithm.algorithm,
             curve: parsedBlob.value.parameters.privateKeyParameters.oids.curve,
@@ -74,15 +69,15 @@ export const parseBlob = (blob: Uint8Array): ParsedBlob => {
  * ```
  * label = 0x26BDB878
  * 
- * KEKe = kdf_gostr3411_2012_256(K, label, ukm)
- * Ks = decryptECB(KEKe, CEK_enc)
+ * KEKe = kdf_gostr3411_2012_256(K, label, UKM)
+ * Ks = unwrap(KEKe, (UKM || CEK_ENC || CEK_MAC))
  * ```
  * @param key Ранее сгененрированный ключ
  * @param ukm `UKM` из блоба
- * @param enc `CEK_ENC` из блоба
+ * @param data Данные для unwrap алгоритма (`UKM || CEK_ENC || CEK_MAC`)
  */
-export const decodeExport = (key: Uint8Array, ukm: Uint8Array, enc: Uint8Array): Uint8Array => {
-    return decryptECB(kdf_gostr3411_2012_256(key, hexToBytes("26BDB878"), ukm), enc, true, sboxes.ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET)
+export const decodeExport = (key: Uint8Array, data: Uint8Array): Uint8Array => {
+    return unwrap(kdf_gostr3411_2012_256(key, hexToBytes("26BDB878"), data.slice(0, 8)), data)
 }
 
 const pem = (data: Uint8Array, header: string) => {

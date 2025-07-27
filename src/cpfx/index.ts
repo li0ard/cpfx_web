@@ -23,7 +23,7 @@ export const proceedPFX = (file: Uint8Array, passw: string): string => {
             console.error("only GOST 34.10-2012 supported")
             return "";
         }
-        let Ks = decodeExport(key, result.exportEncoding.ukm, result.exportEncoding.enc)
+        let Ks = decodeExport(key, result.exportEncoding)
         return ks2pem(Ks, result.oids)
     } catch (e) {
         console.error("Blob decoding error. Perhaps just incorrect password")
