@@ -8,6 +8,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   base: "/cpfx_web",
   plugins: [
+    // @ts-ignore
     vue(),
     tailwindcss()
   ],

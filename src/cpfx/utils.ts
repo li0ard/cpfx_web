@@ -2,11 +2,9 @@ import { gost341194 } from "@li0ard/gost341194"
 import { concatBytes, hexToBytes } from "@noble/hashes/utils"
 import { decryptCFB, sboxes, unwrap } from "@li0ard/magma"
 import { PrivateKeyInfo } from "@peculiar/asn1-pkcs8"
-import { AsnParser, AsnSerializer, OctetString } from "@peculiar/asn1-schema"
-import { ExportKeyBlob, PrivateKeyOids, type ExportOids, type ParsedBlob } from "./schema"
+import { AsnParser } from "@peculiar/asn1-schema"
+import { ExportKeyBlob, type ParsedBlob } from "./schema"
 import { kdf_gostr3411_2012_256 } from "@li0ard/streebog"
-import { AlgorithmIdentifier } from "@peculiar/asn1-x509"
-import { bytesToBase64 } from "./base64"
 
 const utf16le = (str: string) => {
     const buffer = new Uint8Array(str.length * 2);
@@ -49,6 +47,17 @@ export const decodeTransport = (key: Uint8Array, salt: Uint8Array, encrypted: Ui
     return decryptCFB(key, encrypted, salt.slice(0, 8), true, sboxes.ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET)
 }
 
+/**
+ * Парсинг экспортного представления ключа
+ * 
+ * Примечание:
+ * MAC экспортного представления расчитывается следующим образом:
+ * ```
+ * M = MAC(KEKe, ExportKeyBlobValue)
+ * ```
+ * @param blob Ключевой блоб
+ * @returns 
+ */
 export const parseBlob = (blob: Uint8Array): ParsedBlob => {
     let parsed = AsnParser.parse(blob, PrivateKeyInfo)
     let cryptoproBlob = new Uint8Array(parsed.privateKey.buffer)
@@ -69,7 +78,7 @@ export const parseBlob = (blob: Uint8Array): ParsedBlob => {
  * ```
  * label = 0x26BDB878
  * 
- * KEKe = kdf_gostr3411_2012_256(K, label, UKM)
+ * KEKe = KDF_GOSTR3411_2012_256(K, label, UKM)
  * Ks = unwrap(KEKe, (UKM || CEK_ENC || CEK_MAC))
  * ```
  * @param key Ранее сгененрированный ключ
@@ -78,28 +87,4 @@ export const parseBlob = (blob: Uint8Array): ParsedBlob => {
  */
 export const decodeExport = (key: Uint8Array, data: Uint8Array): Uint8Array => {
     return unwrap(kdf_gostr3411_2012_256(key, hexToBytes("26BDB878"), data.slice(0, 8)), data)
-}
-
-const pem = (data: Uint8Array, header: string) => {
-    let str = `-----BEGIN ${header.toUpperCase()}-----\n${bytesToBase64(data).replace(/(.{64})/g, "$1\n")}\n-----END ${header.toUpperCase()}-----`
-    return str
-}
-
-export const ks2pem = (ks: Uint8Array, oids: ExportOids) => {
-    let encodedOids = new PrivateKeyOids()
-    encodedOids.curve = oids.curve
-    encodedOids.digest = oids.digest
-    
-    let algorithm = new AlgorithmIdentifier()
-    algorithm.algorithm = oids.algorithm
-    algorithm.parameters = AsnSerializer.serialize(encodedOids)
-
-    let a = new OctetString()
-    a.buffer = ks.buffer as any
-    
-    let privateKey = new PrivateKeyInfo()
-    privateKey.privateKeyAlgorithm = algorithm
-    privateKey.privateKey = a
-
-    return pem(new Uint8Array(AsnSerializer.serialize(privateKey)), "PRIVATE KEY")
 }

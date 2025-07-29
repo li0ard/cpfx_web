@@ -1,12 +1,12 @@
 import { PKCS8ShroudedKeyBag } from "@peculiar/asn1-pfx";
-import { AsnProp, AsnPropTypes } from "@peculiar/asn1-schema";
+import { AsnProp, AsnPropTypes, BitString } from "@peculiar/asn1-schema";
 
 export class PBEParameters {
     @AsnProp({ type: AsnPropTypes.OctetString })
     public salt: Uint8Array = new Uint8Array();
 
     @AsnProp({ type: AsnPropTypes.Integer })
-    public rounds: number = 0
+    public rounds: number = 0;
 }
 
 export class ExportKeyBlobCek {
@@ -35,11 +35,11 @@ export class PrivateKeyParameters {
 
 
 export class ExportKeyParameters {
-    @AsnProp({ type: AsnPropTypes.BitString })
-    public flags: Uint8Array = new Uint8Array();
+    @AsnProp({ type: BitString })
+    public flags: BitString = new BitString();
 
     @AsnProp({ type: PrivateKeyParameters, implicit: true })
-    public privateKeyParameters: PrivateKeyParameters = new PrivateKeyParameters()
+    public privateKeyParameters: PrivateKeyParameters = new PrivateKeyParameters();
 }
 
 export class ExportKeyBlobValue {
@@ -47,15 +47,15 @@ export class ExportKeyBlobValue {
     public ukm: Uint8Array = new Uint8Array();
 
     @AsnProp({ type: ExportKeyBlobCek })
-    public cek: ExportKeyBlobCek = new ExportKeyBlobCek()
+    public cek: ExportKeyBlobCek = new ExportKeyBlobCek();
 
     @AsnProp({ type: ExportKeyParameters, implicit: true })
-    public parameters: ExportKeyParameters = new ExportKeyParameters()
+    public parameters: ExportKeyParameters = new ExportKeyParameters();
 }
 
 export class ExportKeyBlob {
     @AsnProp({ type: ExportKeyBlobValue })
-    public value: ExportKeyBlobValue = new ExportKeyBlobValue()
+    public value: ExportKeyBlobValue = new ExportKeyBlobValue();
 
     @AsnProp({ type: AsnPropTypes.OctetString })
     public mac: Uint8Array = new Uint8Array();
@@ -66,12 +66,12 @@ export class KeyBagValue {
     public type: string = "";
 
     @AsnProp({ type: PKCS8ShroudedKeyBag, context: 0 })
-    public value: PKCS8ShroudedKeyBag = new PKCS8ShroudedKeyBag()
+    public value: PKCS8ShroudedKeyBag = new PKCS8ShroudedKeyBag();
 }
 
 export class KeyBag {
     @AsnProp({ type: KeyBagValue })
-    public bagValue = new KeyBagValue()
+    public bagValue = new KeyBagValue();
 }
 
 export interface ExportOids {

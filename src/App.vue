@@ -1,58 +1,14 @@
 <script setup lang="ts">
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { KeyRound, CircleAlert } from "lucide-vue-next"
+import { CircleAlert } from "lucide-vue-next"
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { proceedPFX } from "@/cpfx/index"
-import { ref } from 'vue'
-
-const fileInput = ref(null)
-const pfxContent = ref<Uint8Array>();
-const password = ref("");
-const result = ref("");
-let selectedFile: File | null = null
-
-const handleFileChange = (event: Event) => {
-    const files = (event.target as HTMLInputElement).files as FileList
-    if (files.length > 0) selectedFile = files[0];
-    else selectedFile = null;
-}
-
-const onReadFile = () => {
-    if (!selectedFile) {
-        alert("Пожалуйста, выберите файл");
-        return
-    }
-
-    if(selectedFile.type !== "application/x-pkcs12") {
-        alert("Пожалуйста, выберите .pfx/.p12 файл");
-        return;
-    }
-
-    const reader = new FileReader()
-
-    reader.onload = (e) => {
-        pfxContent.value = new Uint8Array((e.target as FileReader).result as ArrayBuffer)
-        result.value = proceedPFX(pfxContent.value, password.value)
-        if(result.value == "") {
-            alert("Произошла ошибка. Описание ошибки находится в консоли");
-            return;
-        }
-
-        const url = URL.createObjectURL(new Blob([result.value], { type: 'text/plain' }))
-        const link = document.createElement('a')
-        link.href = url
-        link.download = "exported.pem"
-        link.click()
-
-        URL.revokeObjectURL(url)
-        result.value = ""
-    }
-
-    reader.onerror = () => alert('Ошибка при чтении файла')
-    reader.readAsArrayBuffer(selectedFile)
-}
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
+import PfxComponent from "@/components/PfxComponent.vue"
+import ContainerComponent from "@/components/ContainerComponent.vue"
 </script>
 
 <template>
@@ -68,23 +24,19 @@ const onReadFile = () => {
             <main class="w-full">
                 <div class="relative">
                     <div class="mx-auto flex max-w-[980px] flex-col items-center gap-2 py-8 md:py-12 md:pb-8 lg:py-24 lg:pb-20 page-header pb-8 page-header pb-8">
+                        <img class="w-[128px]" src="/unlock.webp" />
                         <h1 class="text-center text-3xl font-bold leading-tight tracking-tighter md:text-5xl lg:leading-[1.1]">cpfx web</h1>
                         <span class="max-w-[750px] text-center text-lg font-light text-foreground">
-                            Извлечение приватного ключа из PFX КриптоПро
+                            Извлечение приватного ключа из контейнеров КриптоПро
                         </span>
-                        <div class="mt-5 max-w-[750px] text-lg font-light text-foreground">
-                            <div class="w-full">
-                                <Label>PFX файл</Label>
-                                <Input @change="handleFileChange" ref="fileInput" type="file" class="mt-2" />
-                            </div>
-                            <div class="w-full mt-2">
-                                <Label>Пароль</Label>
-                                <Input v-model="password" type="password" class="mt-2" />
-                            </div>
-                            <div class="w-full mt-2">
-                                <Button @click="onReadFile" class="w-full"><KeyRound class="w-4 h-4 inline" />Извлечь</Button>
-                            </div>
-                        </div>
+                        <Tabs default-value="pfx" class="mt-5 w-[400px] max-sm:p-3 max-sm:w-full">
+                            <TabsList class="grid w-full grid-cols-2">
+                                <TabsTrigger value="pfx">PKCS#12 (.p12/.pfx)</TabsTrigger>
+                                <TabsTrigger value="key">Контейнер (.key)</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="pfx"><PfxComponent /></TabsContent>
+                            <TabsContent value="key"><ContainerComponent /></TabsContent>
+                        </Tabs>
                         <div class="mt-5 w-[414px] max-sm:w-full max-sm:p-3 max-w-[750px] text-sm font-light">
                             <Alert>
                                 <CircleAlert class="h-4 w-4" />

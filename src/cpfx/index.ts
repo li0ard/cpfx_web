@@ -1,9 +1,15 @@
 import { PFX, SafeContents } from "@peculiar/asn1-pfx";
 import { AsnParser, OctetString } from "@peculiar/asn1-schema";
 import { KeyBag, PBEParameters } from "./schema";
-import { decodeExport, decodeTransport, ks2pem, parseBlob, prepareTransportKey } from "./utils";
+import { decodeExport, decodeTransport, parseBlob, prepareTransportKey } from "./utils";
+import { ks2pem } from "@/lib/crypto";
 
-export const proceedPFX = (file: Uint8Array, passw: string): string => {
+export interface Result {
+    ok: boolean,
+    pem: string
+}
+
+export const proceedPFX = (file: Uint8Array, passw: string): Result => {
     let pfx = AsnParser.parse(file, PFX)
     if (pfx.version != 3) throw new Error("can only decode v3 PFX PDU");
     if (pfx.authSafe.contentType !== "1.2.840.113549.1.7.1") throw new Error("only password-protected PFX is implemented");
@@ -21,13 +27,16 @@ export const proceedPFX = (file: Uint8Array, passw: string): string => {
         let result = parseBlob(decodeTransport(key, parameters.salt, new Uint8Array(bag.encryptedData.buffer)))
         if(result.oids.algorithm !== "1.2.643.7.1.1.1.1" && result.oids.algorithm !== "1.2.643.7.1.1.1.2") {
             console.error("only GOST 34.10-2012 supported")
-            return "";
+            return { ok: false, pem: "" };
         }
         let Ks = decodeExport(key, result.exportEncoding)
-        return ks2pem(Ks, result.oids)
+        return {
+            ok: true, 
+            pem: ks2pem(Ks, result.oids),
+        }
     } catch (e) {
         console.error("Blob decoding error. Perhaps just incorrect password")
         console.error(e)
-        return ""
+        return { ok: false, pem: "" };
     }
 }
