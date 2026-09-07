@@ -1,8 +1,8 @@
 <script lang="ts">
     import { KeyRound } from "@lucide/svelte";
-    import { Button } from "./ui/button";
-    import { Input } from "./ui/input";
-    import { Label } from "./ui/label";
+    import { Button } from "$lib/components/ui/button";
+    import { Input } from "$lib/components/ui/input";
+    import { Label } from "$lib/components/ui/label";
     import { proceedCryptoProContainer } from "@li0ard/cpfx";
 
     let files = $state<FileList>();
@@ -20,22 +20,19 @@
             return;
         }
 
-        const readFileAsArrayBuffer = (file: File): Promise<Uint8Array> => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const content = new Uint8Array(reader.result as ArrayBuffer);
-                    resolve(content);
-                }
-                reader.onerror = () => reject(new Error(`Ошибка при чтении файла: ${file.name}`));
-                reader.readAsArrayBuffer(file);
-            });
-        }
+        const readFileAsArrayBuffer = (file: File): Promise<Uint8Array> => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const content = new Uint8Array(reader.result as ArrayBuffer);
+                resolve(content);
+            }
+            reader.onerror = () => reject(new Error(`Ошибка при чтении файла: ${file.name}`));
+            reader.readAsArrayBuffer(file);
+        });
 
         const readPromises = Array.from(files).map(async (file) => {
             try {
                 const content = await readFileAsArrayBuffer(file);
-
                 switch (file.name.toLowerCase()) {
                     case "header.key":
                         containerFiles.header = content;
