@@ -3,7 +3,7 @@
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
     import { Label } from "$lib/components/ui/label";
-    import { proceedCryptoProContainer } from "@li0ard/cpfx";
+    import { proceed_cryptopro, encodePrivateKeyToPem } from "@li0ard/cpfx";
 
     let files = $state<FileList>();
     let password = $state("");
@@ -60,25 +60,25 @@
             return;
         }
 
-        const result = await proceedCryptoProContainer(
-            containerFiles.header,
-            containerFiles.masks,
-            containerFiles.primary,
-            password
-        );
+        try {
+            const result = await proceed_cryptopro(
+                containerFiles.header,
+                containerFiles.masks,
+                containerFiles.primary,
+                password
+            );
 
-        if(!result.ok) {
-            alert("Произошла ошибка. Описание ошибки находится в консоли");
-            return;
+            const url = URL.createObjectURL(new Blob([encodePrivateKeyToPem(result)], { type: 'text/plain' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = "exported.pem";
+            link.click();
+
+            URL.revokeObjectURL(url);
+        } catch(e) {
+            console.error(e);
+            return alert("Произошла ошибка. Описание ошибки находится в консоли");
         }
-
-        const url = URL.createObjectURL(new Blob([result.pem], { type: 'text/plain' }));
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = "exported.pem";
-        link.click();
-
-        URL.revokeObjectURL(url);
     }
 </script>
 <div class="mt-5 max-w-187.5 text-lg font-light text-foreground">

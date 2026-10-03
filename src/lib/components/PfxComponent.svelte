@@ -3,7 +3,7 @@
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
     import { Label } from "$lib/components/ui/label";
-    import { proceedPFX } from "@li0ard/cpfx";
+    import { proceed_pfx, encodePrivateKeyToPem } from "@li0ard/cpfx";
 
     let files = $state<FileList>();
     let password = $state("");
@@ -24,20 +24,18 @@
         reader.onerror = () => alert('Ошибка при чтении файла');
         reader.onload = async (e) => {
             const pfxContent = new Uint8Array((e.target as FileReader).result as ArrayBuffer);
-            const result = await proceedPFX(pfxContent, password);
-
-            if(!result.ok) {
-                alert("Произошла ошибка. Описание ошибки находится в консоли");
-                return;
+            try {
+                const result = await proceed_pfx(pfxContent, password);
+                const url = URL.createObjectURL(new Blob([encodePrivateKeyToPem(result)], { type: 'text/plain' }));
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = "exported.pem";
+                link.click();
+                URL.revokeObjectURL(url);
+            } catch(e) {
+                console.error(e);
+                return alert("Произошла ошибка. Описание ошибки находится в консоли");
             }
-
-            const url = URL.createObjectURL(new Blob([result.pem], { type: 'text/plain' }));
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = "exported.pem";
-            link.click();
-
-            URL.revokeObjectURL(url);
         }
         reader.readAsArrayBuffer(file);
     }
